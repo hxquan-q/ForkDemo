@@ -1,0 +1,92 @@
+server:
+  port: 9004
+
+spring:
+  application:
+    name: job-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+        namespace: public
+        username: nacos
+        password: nacos
+
+# XXL-JOB配置
+xxl:
+  job:
+    admin:
+      addresses: http://127.0.0.1:8080/xxl-job-admin
+    executor:
+      appname: seckill-job-executor
+      ip:
+      port: 9999
+      logpath: ./logs/xxl-job/jobhandler
+      logretentiondays: 30
+
+# 日志配置
+logging:
+  level:
+    com.hxq.job: debug
+
+# Feign配置
+feign:
+  client:
+    config:
+      default:
+        connect-timeout: 5000
+        read-timeout: 5000
+  circuitbreaker:
+    enabled: true # 启用Feign的断路器支持
+
+---
+# Docker环境配置
+spring:
+  config:
+    activate:
+      on-profile: docker
+  # 完全禁用数据源自动配置
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+  # 提供一个空的数据源配置，避免其他组件尝试获取数据源
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  cloud:
+    nacos:
+      discovery:
+        server-addr: nacos-server:8848
+        namespace: public
+        username: nacos
+        password: nacos
+  redis:
+    host: redis-server
+    port: 6379
+    database: 0
+    timeout: 10000
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: -1
+        max-idle: 8
+        min-idle: 0
+  rabbitmq:
+    host: rabbitmq-server
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+
+xxl:
+  job:
+    admin:
+      addresses: http://xxl-job-admin:8080/xxl-job-admin
+    executor:
+      appname: ${spring.application.name}
+      port: 9999
+      logpath: /data/applogs/xxl-job/jobhandler
+      logretentiondays: 30

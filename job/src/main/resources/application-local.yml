@@ -1,0 +1,23 @@
+server:
+  port: 9004
+
+spring:
+  application:
+    name: job-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+
+# XXL-JOB配置
+xxl:
+  job:
+    admin:
+      addresses: http://localhost:8080/xxl-job-admin
+    accessToken: default_token
+    executor:
+      appname: ${spring.application.name}
+      ip:
+      port: 9999
+      logpath: logs/xxl-job/
+      logretentiondays: 30

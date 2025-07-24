@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微服务API测试平台</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { background: #409eff; color: white; padding: 20px; text-align: center; margin-bottom: 20px; }
+        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .api-list { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        .api-item { padding: 10px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; margin-bottom: 10px; }
+        .api-item:hover { background: #f0f9ff; border-color: #409eff; }
+        .api-item.active { background: #e6f7ff; border-color: #409eff; }
+        .method-get { color: #67c23a; }
+        .method-post { color: #409eff; }
+        .test-area { min-height: 400px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .btn { padding: 10px 20px; background: #409eff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #337ecc; }
+        .response { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 15px; margin-top: 15px; }
+        .response pre { white-space: pre-wrap; word-wrap: break-word; }
+        .status-success { color: #67c23a; }
+        .status-error { color: #f56c6c; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 微服务API测试平台</h1>
+            <p>测试后端微服务接口的可用性</p>
+        </div>
+
+        <div class="api-list">
+            <div class="card">
+                <h3>📋 API接口列表</h3>
+                <div id="apiList">
+                    <div class="api-item" data-api="product-list">
+                        <span class="method-get">GET</span> /api/product/list
+                        <div>获取商品列表</div>
+                    </div>
+                    <div class="api-item" data-api="user-login">
+                        <span class="method-post">POST</span> /api/user/login
+                        <div>用户登录</div>
+                    </div>
+                    <div class="api-item" data-api="user-info">
+                        <span class="method-get">GET</span> /api/user/info
+                        <div>获取用户信息</div>
+                    </div>
+                    <div class="api-item" data-api="order-list">
+                        <span class="method-get">GET</span> /api/order/list
+                        <div>获取订单列表</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card test-area">
+                <h3>🔧 API测试</h3>
+                <div id="testForm">
+                    <p>请选择左侧的API接口进行测试</p>
+                </div>
+                <div id="response" class="response" style="display: none;">
+                    <h4>响应结果</h4>
+                    <div id="responseStatus"></div>
+                    <pre id="responseData"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const baseUrl = 'http://localhost:9000';
+        let currentApi = null;
+
+        const apis = {
+            'product-list': {
+                method: 'GET',
+                url: '/api/product/list',
+                description: '获取商品列表'
+            },
+            'user-login': {
+                method: 'POST',
+                url: '/api/user/login',
+                description: '用户登录',
+                body: '{"username":"admin","password":"123456"}'
+            },
+            'user-info': {
+                method: 'GET',
+                url: '/api/user/info',
+                description: '获取用户信息',
+                params: [{ name: 'id', value: '1' }]
+            },
+            'order-list': {
+                method: 'GET',
+                url: '/api/order/list',
+                description: '获取订单列表',
+                params: [
+                    { name: 'userId', value: '1' },
+                    { name: 'page', value: '1' },
+                    { name: 'size', value: '10' }
+                ]
+            }
+        };
+
+        // 绑定API选择事件
+        document.querySelectorAll('.api-item').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.api-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                
+                const apiKey = item.dataset.api;
+                currentApi = apis[apiKey];
+                showTestForm(currentApi);
+            });
+        });
+
+        function showTestForm(api) {
+            const testForm = document.getElementById('testForm');
+            let html = `
+                <div class="form-group">
+                    <label>请求方法</label>
+                    <input type="text" value="${api.method}" readonly>
+                </div>
+                <div class="form-group">
+                    <label>请求URL</label>
+                    <input type="text" id="requestUrl" value="${baseUrl}${api.url}" readonly>
+                </div>
+            `;
+
+            if (api.params) {
+                html += '<h4>请求参数</h4>';
+                api.params.forEach((param, index) => {
+                    html += `
+                        <div class="form-group">
+                            <label>${param.name}</label>
+                            <input type="text" id="param_${index}" value="${param.value}">
+                        </div>
+                    `;
+                });
+            }
+
+            if (api.body) {
+                html += `
+                    <div class="form-group">
+                        <label>请求体 (JSON)</label>
+                        <textarea id="requestBody" rows="4">${api.body}</textarea>
+                    </div>
+                `;
+            }
+
+            html += '<button class="btn" onclick="sendRequest()">发送请求</button>';
+            testForm.innerHTML = html;
+        }
+
+        async function sendRequest() {
+            if (!currentApi) return;
+
+            const responseDiv = document.getElementById('response');
+            const statusDiv = document.getElementById('responseStatus');
+            const dataDiv = document.getElementById('responseData');
+
+            try {
+                let url = baseUrl + currentApi.url;
+                const options = {
+                    method: currentApi.method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                // 添加查询参数
+                if (currentApi.params) {
+                    const params = new URLSearchParams();
+                    currentApi.params.forEach((param, index) => {
+                        const value = document.getElementById(`param_${index}`).value;
+                        if (value) params.append(param.name, value);
+                    });
+                    if (params.toString()) {
+                        url += '?' + params.toString();
+                    }
+                }
+
+                // 添加请求体
+                if (currentApi.body) {
+                    const bodyText = document.getElementById('requestBody').value;
+                    if (bodyText) {
+                        options.body = bodyText;
+                    }
+                }
+
+                const startTime = Date.now();
+                const response = await fetch(url, options);
+                const endTime = Date.now();
+                const data = await response.json();
+
+                statusDiv.innerHTML = `
+                    <span class="${response.ok ? 'status-success' : 'status-error'}">
+                        状态: ${response.status} ${response.statusText}
+                    </span>
+                    <span style="margin-left: 20px;">耗时: ${endTime - startTime}ms</span>
+                `;
+                dataDiv.textContent = JSON.stringify(data, null, 2);
+                responseDiv.style.display = 'block';
+
+            } catch (error) {
+                statusDiv.innerHTML = `<span class="status-error">错误: ${error.message}</span>`;
+                dataDiv.textContent = '请求失败';
+                responseDiv.style.display = 'block';
+            }
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('API测试平台已加载');
+        });
+    </script>
+</body>
+</html>

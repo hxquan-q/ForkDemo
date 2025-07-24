@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>微服务API测试平台</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .header { background: #409eff; color: white; padding: 20px; text-align: center; border-radius: 8px; margin-bottom: 20px; }
+        .test-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .api-button { background: #409eff; color: white; border: none; padding: 10px 20px; margin: 5px; border-radius: 4px; cursor: pointer; }
+        .api-button:hover { background: #337ecc; }
+        .result { background: #f8f9fa; border: 1px solid #e9ecef; padding: 15px; margin-top: 10px; border-radius: 4px; }
+        .success { color: #67c23a; }
+        .error { color: #f56c6c; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 微服务API测试平台</h1>
+            <p>测试后端微服务接口的可用性</p>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 快速API测试</h3>
+            <button class="api-button" onclick="testProductList()">测试商品列表</button>
+            <button class="api-button" onclick="testUserLogin()">测试用户登录</button>
+            <button class="api-button" onclick="testUserInfo()">测试用户信息</button>
+            <button class="api-button" onclick="testOrderList()">测试订单列表</button>
+            <button class="api-button" onclick="clearResults()">清空结果</button>
+            <div id="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 测试结果统计</h3>
+            <div id="stats">
+                <span>成功: <span id="successCount">0</span></span> | 
+                <span>失败: <span id="failCount">0</span></span> | 
+                <span>总计: <span id="totalCount">0</span></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const baseUrl = 'http://localhost:9000';
+        let successCount = 0;
+        let failCount = 0;
+        let totalCount = 0;
+
+        function updateStats() {
+            document.getElementById('successCount').textContent = successCount;
+            document.getElementById('failCount').textContent = failCount;
+            document.getElementById('totalCount').textContent = totalCount;
+        }
+
+        function addResult(title, success, data, time) {
+            const results = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'result';
+            
+            const statusClass = success ? 'success' : 'error';
+            const statusText = success ? '✅ 成功' : '❌ 失败';
+            
+            resultDiv.innerHTML = `
+                <h4>${title} - <span class="${statusClass}">${statusText}</span></h4>
+                <p>响应时间: ${time}ms</p>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            
+            results.appendChild(resultDiv);
+            
+            if (success) successCount++;
+            else failCount++;
+            totalCount++;
+            updateStats();
+        }
+
+        async function testProductList() {
+            const startTime = Date.now();
+            try {
+                const response = await fetch(`${baseUrl}/api/product/list`);
+                const data = await response.json();
+                const endTime = Date.now();
+                
+                addResult('商品列表API', response.ok, data, endTime - startTime);
+            } catch (error) {
+                const endTime = Date.now();
+                addResult('商品列表API', false, { error: error.message }, endTime - startTime);
+            }
+        }
+
+        async function testUserLogin() {
+            const startTime = Date.now();
+            try {
+                const response = await fetch(`${baseUrl}/api/user/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'admin', password: '123456' })
+                });
+                const data = await response.json();
+                const endTime = Date.now();
+                
+                addResult('用户登录API', response.ok, data, endTime - startTime);
+            } catch (error) {
+                const endTime = Date.now();
+                addResult('用户登录API', false, { error: error.message }, endTime - startTime);
+            }
+        }
+
+        async function testUserInfo() {
+            const startTime = Date.now();
+            try {
+                const response = await fetch(`${baseUrl}/api/user/info?id=1`);
+                const data = await response.json();
+                const endTime = Date.now();
+                
+                addResult('用户信息API', response.ok, data, endTime - startTime);
+            } catch (error) {
+                const endTime = Date.now();
+                addResult('用户信息API', false, { error: error.message }, endTime - startTime);
+            }
+        }
+
+        async function testOrderList() {
+            const startTime = Date.now();
+            try {
+                const response = await fetch(`${baseUrl}/api/order/list?userId=1&page=1&size=10`);
+                const data = await response.json();
+                const endTime = Date.now();
+                
+                addResult('订单列表API', response.ok, data, endTime - startTime);
+            } catch (error) {
+                const endTime = Date.now();
+                addResult('订单列表API', false, { error: error.message }, endTime - startTime);
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            successCount = 0;
+            failCount = 0;
+            totalCount = 0;
+            updateStats();
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('API测试平台已加载');
+            updateStats();
+        });
+    </script>
+</body>
+</html>

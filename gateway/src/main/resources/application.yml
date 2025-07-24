@@ -1,0 +1,111 @@
+server:
+  port: 9000
+
+spring:
+  application:
+    name: gateway-service
+  main:
+    web-application-type: reactive
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+        namespace: public
+        username: nacos
+        password: nacos
+    gateway:
+      discovery:
+        locator:
+          enabled: true # 开启从注册中心动态创建路由的功能
+          lower-case-service-id: true # 服务名小写
+      routes:
+        # 用户服务路由
+        - id: user-service-route
+          uri: lb://user-service
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=0
+        # 商品服务路由
+        - id: product-service-route
+          uri: lb://product-service
+          predicates:
+            - Path=/api/product/**, /api/seckill/**
+          filters:
+            - StripPrefix=0
+        # 订单服务路由
+        - id: order-service-route
+          uri: lb://order-service
+          predicates:
+            - Path=/api/order/**
+          filters:
+            - StripPrefix=0
+    sentinel:
+      transport:
+        dashboard: 127.0.0.1:8080 # Sentinel控制台地址
+
+  # Redis配置
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    database: 0
+    password:
+    timeout: 10000
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: -1
+        max-idle: 8
+        min-idle: 0
+
+# 日志配置
+logging:
+  level:
+    org.springframework.cloud.gateway: debug
+    reactor.netty.http.client: debug
+
+# Actuator配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+
+---
+# Docker环境配置
+spring:
+  config:
+    activate:
+      on-profile: docker
+  # 完全禁用数据源自动配置
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+  # 提供一个空的数据源配置，避免其他组件尝试获取数据源
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  cloud:
+    nacos:
+      discovery:
+        server-addr: nacos-server:8848
+        namespace: public
+        username: nacos
+        password: nacos
+  redis:
+    host: redis-server
+    port: 6379
+    database: 0
+    timeout: 10000
+    lettuce:
+      pool:
+        max-active: 8
+        max-wait: -1
+        max-idle: 8
+        min-idle: 0
